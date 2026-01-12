@@ -1,15 +1,43 @@
+import io
 import json
 import re
 from datetime import datetime
 from typing import Optional, Union
+from xml.etree import ElementTree as ET
 
 import requests
 import yaml
 from ibflex import enums, client, parser, FlexQueryResponse, BuySell, FlexStatement, Trade, ChangeInDividendAccrual
+from ibflex.parser import FlexParserError
 
 # Create logger
 import logging
 logger = logging.getLogger(__name__)
+
+
+def clean_xml_for_parsing(xml_content: str) -> str:
+    """
+    Remove unknown fields from XML that ibflex parser doesn't support.
+    IBKR occasionally adds new fields to their Flex Query XML that the parser
+    doesn't recognize, causing FlexParserError.
+    """
+    try:
+        root = ET.fromstring(xml_content)
+        
+        # List of known problematic fields that ibflex parser doesn't support
+        fields_to_remove = ['positionActionID']
+        
+        # Remove unknown fields from all Trade elements
+        for trade in root.findall('.//Trade'):
+            for field in fields_to_remove:
+                if field in trade.attrib:
+                    logger.debug("Removing unsupported field '%s' from Trade element", field)
+                    del trade.attrib[field]
+        
+        return ET.tostring(root, encoding='unicode')
+    except ET.ParseError as e:
+        logger.warning("Failed to parse XML for cleaning, using original: %s", e)
+        return xml_content
 
 
 def get_cash_amount_from_flex(account_statement: FlexStatement) -> dict:
@@ -145,7 +173,21 @@ class SyncIBKR:
         logger.info("Fetching Query")
         response = client.download(self.ibkrtoken, self.ibkrquery)
         #logger.info("Parsing Query:\n%s", response)
-        query: FlexQueryResponse = parser.parse(response)
+        
+        # Clean XML to remove fields that ibflex parser doesn't support
+        cleaned_response = clean_xml_for_parsing(response)
+        
+        try:
+            # Pass XML as file-like object to avoid "Filename too long" error
+            # ElementTree.parse() expects a file path or file-like object, not a string
+            xml_file = io.StringIO(cleaned_response)
+            query: FlexQueryResponse = parser.parse(xml_file)
+        except FlexParserError as e:
+            logger.error("Error parsing IBKR Flex Query response: %s", e)
+            raise
+        except Exception as e:
+            logger.error("Unexpected error parsing IBKR Flex Query response: %s", e)
+            raise
         account_statement = self.get_account_flex_statement(query)
         activities = []
         date_format = "%Y-%m-%d %H:%M:%S"

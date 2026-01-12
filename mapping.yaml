@@ -9,4 +9,19 @@ symbol_mapping:
   IWDA: IWDA.AS
   VWCE: VWCE.DE
   ASML: ASML.AS
+  # ISIN mappings for US stocks
+  US11135F1012: AVGO  # Broadcom Inc.
+  US09290D1019: BLK   # BlackRock, Inc.
+  US1667641005: CVX   # Chevron Corporation
+  US02079K3059: GOOGL # GOOGLE
+  US38141G1040: GS    # The Goldman Sachs Group, Inc.
+  US45841N1072: IBKR  # Interactive Brokers Group, Inc.
+  US4781601046: JNJ   # Johnson & Johnson
+  US1912161007: KO    # The Coca-Cola Company
+  US5801351017: MCD   # McDonald's Corporation
+  US6153691059: MCO   # Moody's Corporation
+  US30303M1027: META  # Meta Platforms, Inc.
+  US5949181045: MSFT  # Microsoft Corporation
+  US67066G1040: NVDA  # NVIDIA Corporation
+  US92826C8394: V     # Visa Inc.
   # Add more mappings here as needed
